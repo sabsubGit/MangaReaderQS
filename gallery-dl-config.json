@@ -1,0 +1,64 @@
+{
+    "extractor": {
+        "#": "Everything lands in ~/Manga, which the shell's manga reader (/manga) reads.",
+        "base-directory": "~/Manga/",
+
+        "#archive": "Remembers what was downloaded, so running the same URL again only fetches new chapters (the images themselves are gone once zipped).",
+        "archive": "~/.local/share/gallery-dl/archive.sqlite3",
+
+        "#sleep": "Be gentle with the sites: a short random pause between requests.",
+        "sleep-request": [0.5, 1.5],
+
+        "#manga": "Any site whose chapters come with a manga name and a chapter number: ~/Manga/<Series>/c0012 Title.cbz. Everything else keeps gallery-dl's own layout.",
+        "directory": {
+            "manga and chapter is not None": ["{manga}", "c{chapter:>04}{chapter_minor:?//}{title:? //}"]
+        },
+        "postprocessors": ["cbz", "source"],
+
+        "mangadex": {
+            "lang": "en",
+            "#group": "Two groups can translate the same chapter: their names keep the files apart.",
+            "directory": {
+                "manga and chapter is not None": ["{manga}", "c{chapter:>04}{chapter_minor:?//}{title:? //}{group:J, /? [/]/}"]
+            },
+            "#covers": "A series URL also fetches the cover art, for the reader's library.",
+            "manga": { "covers": true },
+            "#covers-lang": "Covers are tagged with the original's language (usually ja), so 'en' above would find none.",
+            "covers": { "directory": ["{manga}", "covers"], "lang": null }
+        }
+    },
+
+    "postprocessor": {
+        "cbz": {
+            "name": "zip",
+            "extension": "cbz",
+            "compression": "store",
+            "#mode": "safe = the .cbz is closed after every page, so a download stopped mid-chapter leaves a readable file that resuming finishes.",
+            "mode": "safe",
+            "keep-files": false,
+            "filter": "manga and chapter is not None"
+        },
+        "#doujin": "For /doujin <url> (manga.py passes these, plus the doujin folder and '<id> <title>' naming): the gallery's details as info.json, packed into its .cbz with the pages, for the doujin library's tags / artist / language filters.",
+        "doujin-info": {
+            "name": "metadata",
+            "mode": "json",
+            "event": "post",
+            "filename": "info.json"
+        },
+        "doujin-cbz": {
+            "name": "zip",
+            "extension": "cbz",
+            "compression": "store",
+            "mode": "safe",
+            "keep-files": false,
+            "files": ["info.json"]
+        },
+        "#source": "For update checks: when the reader starts a download, the series folder notes that URL in .source. Does nothing otherwise.",
+        "source": {
+            "name": "exec",
+            "event": "post",
+            "command": ["~/.config/quickshell/manga/manga.py", "source", "{_directory}"],
+            "filter": "manga and chapter is not None"
+        }
+    }
+}
